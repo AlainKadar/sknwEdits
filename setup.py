@@ -1,23 +1,23 @@
 from setuptools import setup
 
-descr = """sknw: skeleton analysis in Python.
+descr = """sknwEdits: skeleton analysis in Python.
 Inspired by Juan Nunez-Iglesias's skan.
 """
 
 if __name__ == '__main__':
-    setup(name='sknw',
-        version='0.13',
-        url='https://github.com/yxdragon/sknw',
+    setup(name='sknwEdits',
+        version='0.1',
+        url='https://github.com/AlainKadar/sknwEdits',
         description='Analysis of object skeletons',
         long_description=descr,
-        author='YXDragon',
-        author_email='yxdragon@imagepy.org',
+        author='AlainKadar',
+        author_email='alaink@umich.edu',
         license='BSD 3-clause',
-        packages=['sknw'],
+        packages=['sknwEdits'],
         package_data={},
         install_requires=[
             'numpy',
-            'networkx',
+            'igraph',
             'numba'
         ],
     )
