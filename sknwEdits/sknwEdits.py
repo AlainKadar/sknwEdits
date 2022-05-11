@@ -1,6 +1,9 @@
 import numpy as np
 import igraph as ig
 
+#For an unravelled image, this returns the relative indices for the neighbours of a given image shape.
+#Eg if I have an image with shape (100,100), the neighbours of a particular image index, i, will be at i-101, i-100, ...
+#This function returns that list
 def neighbors(shape):
     dim = len(shape)
     block = np.ones([3]*dim)
@@ -11,6 +14,9 @@ def neighbors(shape):
     acc = np.cumprod((1,)+shape[::-1][:-1])
     return np.dot(idx, acc[::-1])
 
+#Examines non-zero voxels and marks them as
+#  1 when voxel is edge
+#  2 when voxel is node
 def mark(img, nbs): # mark the array use (0, 1, 2)
     img = img.ravel()
     for p in range(len(img)):
@@ -21,6 +27,8 @@ def mark(img, nbs): # mark the array use (0, 1, 2)
         if s==2:img[p]=1
         else:img[p]=2
 
+#idx is indices of neighbours of a node which are also nodes
+#Function converts index locations in img to coordinates
 def idx2rc(idx, acc):
     rst = np.zeros((len(idx), len(acc)), dtype=np.int16)
     for i in range(len(idx)):
@@ -30,6 +38,7 @@ def idx2rc(idx, acc):
     rst -= 1
     return rst
     
+
 def fill(img, p, num, nbs, acc, buf):
     img[p] = num
     buf[0] = p
@@ -37,15 +46,16 @@ def fill(img, p, num, nbs, acc, buf):
     
     while True:
         p = buf[cur]
-        for dp in nbs:
+        for dp in nbs: #for neighbour in neighbours of node
             cp = p+dp
-            if img[cp]==2:
-                img[cp] = num
-                buf[s] = cp
+            if img[cp]==2: #if neighbour of node is also node
+                img[cp] = num #mark
+                buf[s] = cp #store index of node position
                 s+=1
-            if img[cp]==1: iso=False
+            if img[cp]==1: iso=False #if node has an edge neighbour, it cannot be a one pixel node
         cur += 1
         if cur==s:break
+        print(buf[:s])
     return iso, idx2rc(buf[:s], acc)
 
 def trace(img, p, nbs, acc, buf):
@@ -69,15 +79,19 @@ def trace(img, p, nbs, acc, buf):
                 newp = cp
         p = newp
         if c2!=0:break
+
+        #returns (node id1, node id2, pts)
     return (c1-10, c2-10, idx2rc(buf[:cur+1], acc))
-   
+
+
 def parse_struc(img, nbs, acc, iso, ring):
     img = img.ravel()
     buf = np.zeros(131072000, dtype=np.int64)
+    #The image array is marked with num, where values of the same num correspond to voxels belonging to the same node
     num = 10
     nodes = []
     for p in range(len(img)):
-        if img[p] == 2:
+        if img[p] == 2: #ie if voxel is node
             isiso, nds = fill(img, p, num, nbs, acc, buf)
             if isiso and not iso: continue
             num += 1
@@ -102,9 +116,12 @@ def parse_struc(img, nbs, acc, iso, ring):
     
 # use nodes and edges build a networkx graph
 def build_graph(nodes, edges, multi=False, full=True):
-    print(nodes[0])
-    print(edges[0])
+    #i is list of node positions where each item in list corresponds to a single node.
+    #Each item may contain several points if the node spans several voxels
+    #os is a list of centroids for each node
+    #if full, os will be rounded to nearest voxel position
     os = np.array([i.mean(axis=0) for i in nodes])
+    
     if full: os = os.round().astype(np.uint16)
     graph = ig.Graph()
     graph.add_vertices(len(nodes))
@@ -123,14 +140,14 @@ def build_graph(nodes, edges, multi=False, full=True):
     return graph
 
 def mark_node(ske):
-    buf = np.pad(ske, (1,1), mode='constant')
-    nbs = neighbors(buf.shape)
+    buf = np.pad(ske, (1,1), mode='constant') #adds boundary to edges/faces of array
+    nbs = neighbors(buf.shape) #buf.shape = ske.shape + (2,2,...)
     acc = np.cumprod((1,)+buf.shape[::-1][:-1])[::-1]
     mark(buf, nbs)
     return buf
 def build_sknw(ske, multi=False, iso=True, ring=True, full=True):##
     buf = np.pad(ske, (1,1), mode='constant')###
-    nbs = neighbors(buf.shape)
+    nbs = neighbors(buf.shape) #Relative indices of neighbors
     acc = np.cumprod((1,)+buf.shape[::-1][:-1])[::-1]
     mark(buf, nbs)
     nodes, edges = parse_struc(buf, nbs, acc, iso, ring)
