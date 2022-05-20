@@ -55,7 +55,6 @@ def fill(img, p, num, nbs, acc, buf):
             if img[cp]==1: iso=False #if node has an edge neighbour, it cannot be a one pixel node
         cur += 1
         if cur==s:break
-        print(buf[:s])
     return iso, idx2rc(buf[:s], acc)
 
 def trace(img, p, nbs, acc, buf):
