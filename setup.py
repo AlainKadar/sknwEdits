@@ -17,7 +17,6 @@ if __name__ == '__main__':
         package_data={},
         install_requires=[
             'numpy',
-            'igraph',
-            'numba'
+            'igraph'
         ],
     )
